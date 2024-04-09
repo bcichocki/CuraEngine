@@ -22,11 +22,13 @@ public:
      */
     Settings settings;
 
+    std::vector<Settings> groups_settings;
+	
     /*
      * \brief Which extruder to evaluate each setting on, if different from the
      * normal extruder of the object it's evaluated for.
      */
-    std::unordered_map<std::string, ExtruderTrain*> limit_to_extruder;
+    //std::unordered_map<std::string, ExtruderTrain*> limit_to_extruder;
 
     /*
      * \brief The mesh groups in the scene.
@@ -54,22 +56,13 @@ public:
      * nothing.
      * \param num_mesh_groups The number of mesh groups to allocate for.
      */
-    Scene(const size_t num_mesh_groups);
+    //Scene(const size_t num_mesh_groups);
 
-    /*
-     * \brief Gets a string that contains all settings.
-     *
-     * This string mimics the command line call of CuraEngine. In theory you
-     * could call CuraEngine with this output in the command in order to
-     * reproduce the output.
-     */
-    const std::string getAllSettingsString() const;
-
-    /*
-     * \brief Generate the 3D printing instructions to print a given mesh group.
-     * \param mesh_group The mesh group to slice.
-     */
-    void processMeshGroup(MeshGroup& mesh_group);
+	Scene(const size_t num_mesh_groups) : mesh_groups(num_mesh_groups) , current_mesh_group(mesh_groups.begin())
+	{
+		for(auto& mesh_group : mesh_groups)
+			mesh_group.settings.setParent(&settings);
+	}
 
 private:
     /*

@@ -8,6 +8,7 @@
 
 #include "../GCodePathConfig.h"
 #include "../utils/Coord_t.h"
+#include <engine/core/groups.h>
 
 namespace cura
 {
@@ -29,7 +30,8 @@ private:
     const ExtruderTrain& adhesion_extruder_train;
     const ExtruderTrain& support_infill_train;
     const ExtruderTrain& support_roof_train;
-    const ExtruderTrain& support_bottom_train;
+    //const ExtruderTrain& support_bottom_train;
+    const Tina3D::LayerGroupSettings& mesh_layer_group0;
 
     const std::vector<Ratio> line_width_factor_per_extruder;
     static std::vector<Ratio> getLineWidthFactorPerExtruder(const LayerIndex& layer_nr);
@@ -77,6 +79,6 @@ private:
     void handleInitialLayerSpeedup(const SliceDataStorage& storage, const LayerIndex& layer_nr, const size_t initial_speedup_layer_count);
 };
 
-} // namespace cura
+}; // namespace cura
 
 #endif // SETTINGS_PATH_CONFIGS_H

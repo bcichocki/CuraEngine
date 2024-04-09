@@ -6,8 +6,7 @@
 
 #include "settings/Settings.h"
 #include "utils/AABB3D.h"
-#include "utils/floatpoint.h"
-#include "utils/FMatrix4x3.h"
+#include <engine/core/groups.h>
 
 namespace cura
 {
@@ -68,6 +67,7 @@ public:
     std::vector<MeshVertex> vertices;//!< list of all vertices in the mesh
     std::vector<MeshFace> faces; //!< list of all faces in the mesh
     Settings settings;
+    Tina3D::LayerGroupSettings layer_group;
     std::string mesh_name;
 
     Mesh(Settings& parent);
@@ -93,12 +93,6 @@ public:
             v.p += offset;
         aabb.offset(offset);
     }
-
-    /*!
-     * Apply an affine transformation to this mesh's 3D data.
-     * \param transformation The transformation to apply.
-     */
-    void transform(const FMatrix4x3& transformation);
 
 private:
     mutable bool has_disconnected_faces; //!< Whether it has been logged that this mesh contains disconnected faces

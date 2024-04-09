@@ -3,25 +3,36 @@
 
 #include "GCodePath.h"
 #include "../GCodePathConfig.h"
+#include <string>
+#include <cassert>
 
 namespace cura
 {
-GCodePath::GCodePath(const GCodePathConfig& config, std::string mesh_id, const SpaceFillType space_fill_type, const Ratio flow, const bool spiralize, const Ratio speed_factor) :
-config(&config),
-mesh_id(mesh_id),
-space_fill_type(space_fill_type),
-flow(flow),
-speed_factor(speed_factor),
-retract(false),
-perform_z_hop(false),
-perform_prime(false),
-skip_agressive_merge_hint(false),
-points(std::vector<Point>()),
-done(false),
-spiralize(spiralize),
-fan_speed(GCodePathConfig::FAN_SPEED_DEFAULT),
-estimates(TimeMaterialEstimates())
+GCodePath::GCodePath(const GCodePathConfig& config, const std::string& mesh_id, const SpaceFillType space_fill_type, const Ratio flow, size_t group_id, const Ratio speed_factor) :
+	config(&config),
+	mesh_id(mesh_id),
+	space_fill_type(space_fill_type),
+	flow(flow),
+	group_id(group_id),
+	speed_factor(speed_factor),
+	retract(false),
+	perform_z_hop(false),
+	perform_prime(false),
+	skip_agressive_merge_hint(false),
+	points(std::vector<Point>()),
+	done(false),
+	fan_speed(GCodePathConfig::FAN_SPEED_DEFAULT),
+	estimates(TimeMaterialEstimates())
 {
+	static constexpr size_t ID_DOWNSKIN = 0;
+	static constexpr size_t ID_UPSKIN = 1;
+	static constexpr size_t ID_LAYER_0 = 2;
+
+	if(group_id > ID_LAYER_0)
+		this->flow = flow * (1 << (group_id - ID_LAYER_0));
+
+	//if(group_id > 3)
+	//	this->flow = flow * (1 << (group_id - 3));
 }
 
 bool GCodePath::isTravelPath() const

@@ -97,14 +97,14 @@ public:
 
     coord_t vSize() const
     {
-        return sqrt(vSize2());
+        return static_cast<coord_t>(sqrt(vSize2()));
     }
     
     double vSizeMM() const
     {
-        double fx = INT2MM(x);
-        double fy = INT2MM(y);
-        double fz = INT2MM(z);
+        const double fx = INT2MM(x);
+        const double fy = INT2MM(y);
+        const double fz = INT2MM(z);
         return sqrt(fx*fx+fy*fy+fz*fz);
     }
 

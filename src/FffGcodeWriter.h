@@ -37,8 +37,8 @@ class TimeKeeper;
  */
 class FffGcodeWriter : public NoCopy
 {
-    friend class Scene; // cause WireFrame2Gcode uses the member [gcode] (TODO)
-    friend class FffProcessor; //Because FffProcessor exposes finalize (TODO)
+   // friend class Scene; // cause WireFrame2Gcode uses the member [gcode] (TODO)
+
 private:
     coord_t max_object_height; //!< The maximal height of all previously sliced meshgroups, used to avoid collision when moving to the next meshgroup to print.
 
@@ -56,11 +56,6 @@ private:
      * It holds information such as the last written position etc.
      */
     GCodeExport gcode;
-
-    /*!
-     * The gcode file to write to when using CuraEngine as command line tool.
-     */
-    std::ofstream output_file;
 
     /*!
      * For each raft/filler layer, the extruders to be used in that layer in the order in which they are going to be used.
@@ -93,23 +88,10 @@ public:
      */
     FffGcodeWriter();
 
-    /*!
-     * Set the target to write gcode to: to a file.
-     * 
-     * Used when CuraEngine is used as command line tool.
-     * 
-     * \param filename The filename of the file to which to write the gcode.
-     */
-    bool setTargetFile(const char* filename)
-    {
-        output_file.open(filename);
-        if (output_file.is_open())
-        {
-            gcode.setOutputStream(&output_file);
-            return true;
-        }
-        return false;
-    }
+	GCodeExport& GetGCodeExport() { return gcode; }
+
+	// Add the end gcode and set all temperatures to zero.
+	void finalize(std::string& prefix);
 
     /*!
      * Set the target to write gcode to: an output stream.
@@ -260,17 +242,6 @@ private:
     LayerPlan& processLayer(const SliceDataStorage& storage, LayerIndex layer_nr, const size_t total_layers) const;
 
     /*!
-     * This function checks whether prime blob should happen for any extruder on the first layer.
-     * Priming will always happen, but the actual priming may or may not include a prime blob.
-     *
-     * Technically, this function checks whether any extruder needs to be primed (with a prime blob)
-     * separately just before they are used.
-     * 
-     * \return whether any extruder need to be primed separately just before they are used
-     */
-    bool getExtruderNeedPrimeBlobDuringFirstLayer(const SliceDataStorage& storage, const size_t extruder_nr) const;
-
-    /*!
      * Plan priming of all used extruders which haven't been primed yet
      * \param[in] storage where the slice data is stored.
      * \param layer_plan The initial planning of the g-code of the layer.
@@ -290,14 +261,6 @@ private:
      */
     void processSkirtBrim(const SliceDataStorage& storage, LayerPlan& gcodeLayer, unsigned int extruder_nr) const;
 
-    /*!
-     * Adds the ooze shield to the layer plan \p gcodeLayer.
-     * 
-     * \param[in] storage where the slice data is stored.
-     * \param gcodeLayer The initial planning of the gcode of the layer.
-     */
-    void processOozeShield(const SliceDataStorage& storage, LayerPlan& gcodeLayer) const;
-    
     /*!
      * Adds the draft protection screen to the layer plan \p gcodeLayer.
      * 
@@ -346,26 +309,6 @@ private:
      */
     std::vector<size_t> calculateMeshOrder(const SliceDataStorage& storage, const size_t extruder_nr) const;
 
-    /*!
-     * Add a single layer from a single mesh-volume to the layer plan \p gcodeLayer in mesh surface mode.
-     * 
-     * \param[in] storage where the slice data is stored.
-     * \param mesh The mesh to add to the layer plan \p gcodeLayer.
-     * \param mesh_config the line config with which to print a print feature
-     * \param gcodeLayer The initial planning of the gcode of the layer.
-     */
-    void addMeshLayerToGCode_meshSurfaceMode(const SliceDataStorage& storage, const SliceMeshStorage& mesh, const PathConfigStorage::MeshPathConfigs& mesh_config, LayerPlan& gcodeLayer) const;
-    
-    /*!
-     * Add the open polylines from a single layer from a single mesh-volume to the layer plan \p gcodeLayer for mesh the surface modes.
-     * 
-     * \param[in] storage where the slice data is stored.
-     * \param mesh The mesh for which to add to the layer plan \p gcodeLayer.
-     * \param mesh_config the line config with which to print a print feature
-     * \param gcodeLayer The initial planning of the gcode of the layer.
-     */
-    void addMeshOpenPolyLinesToGCode(const SliceMeshStorage& mesh, const PathConfigStorage::MeshPathConfigs& mesh_config, LayerPlan& gcode_layer) const;
-    
     /*!
      * Add all features of a given extruder from a single layer from a single mesh-volume to the layer plan \p gcode_layer.
      * 
@@ -443,16 +386,6 @@ private:
      * \return Whether this function added anything to the layer plan
      */
     bool processInsets(const SliceDataStorage& storage, LayerPlan& gcodeLayer, const SliceMeshStorage& mesh, const size_t extruder_nr, const PathConfigStorage::MeshPathConfigs& mesh_config, const SliceLayerPart& part) const;
-
-    /*!
-     * Generate the a spiralized wall for a given layer part.
-     * \param[in] storage where the slice data is stored.
-     * \param[out] gcodeLayer The initial planning of the gcode of the layer.
-     * \param mesh_config the line config with which to print a print feature
-     * \param part The part for which to create gcode
-     * \param mesh The mesh for which to add to the layer plan \p gcodeLayer.
-     */
-    void processSpiralizedWall(const SliceDataStorage& storage, LayerPlan& gcode_layer, const PathConfigStorage::MeshPathConfigs& mesh_config, const SliceLayerPart& part, const SliceMeshStorage& mesh) const;
 
     /*!
      * Add the gcode of the outline gaps: the areas for thin parts in which a single perimter doesnt fit.
@@ -619,22 +552,6 @@ private:
     std::optional<Point> getSeamAvoidingLocation(const Polygons& filling_part, int filling_angle, Point last_position) const;
 
     /*!
-     * Add the g-code for ironing the top surface.
-     *
-     * This produces additional low-extrusion moves that cover the top surface,
-     * in order to smooth the surface more.
-     *
-     * \param mesh The settings storage to get the ironing settings and skin
-     * angles from.
-     * \param layer The layer to process the ironing for.
-     * \param line_config The configuration of the lines to draw the ironing
-     * with.
-     * \param[out] gcode_layer The output layer to put the resulting paths in.
-     * \return Whether this function added anything to the layer plan.
-     */
-    bool processIroning(const SliceMeshStorage& mesh, const SliceLayer& part, const GCodePathConfig& line_config, LayerPlan& gcode_layer) const;
-
-    /*!
      * Add the support to the layer plan \p gcodeLayer of the current layer for all support parts with the given \p extruder_nr.
      * \param[in] storage where the slice data is stored.
      * \param gcodeLayer The initial planning of the gcode of the layer.
@@ -683,35 +600,11 @@ public:
     void setExtruder_addPrime(const SliceDataStorage& storage, LayerPlan& gcode_layer, const size_t extruder_nr) const;
 
 private:
-    /*!
-     * Add the prime tower gcode for the current layer.
-     * \param[in] storage where the slice data is stored.
-     * \param gcodeLayer The initial planning of the gcode of the layer.
-     * \param prev_extruder The current extruder with which we last printed.
-     */
-    void addPrimeTower(const SliceDataStorage& storage, LayerPlan& gcodeLayer, int prev_extruder) const;
     
     /*!
      * Add the end gcode and set all temperatures to zero.
      */
-    void finalize();
-
-    /*!
-     * Calculate for each layer the index of the vertex that is considered to be the seam
-     * \param storage where the slice data is stored.
-     * \param total_layers The total number of layers
-     */
-    void findLayerSeamsForSpiralize(SliceDataStorage& storage, size_t total_layers);
-
-    /*!
-     * Calculate the index of the vertex that is considered to be the seam for the given layer
-     * \param storage where the slice data is stored.
-     * \param mesh the mesh containing the layer of interest
-     * \param layer_nr layer number of the layer whose seam verted index is required
-     * \param last_layer_nr layer number of the previous layer
-     * \return layer seam vertex index
-     */
-    unsigned int findSpiralizedLayerSeamVertexIndex(const SliceDataStorage& storage, const SliceMeshStorage& mesh, const int layer_nr, const int last_layer_nr);
+	//void finalize();
 };
 
 }//namespace cura

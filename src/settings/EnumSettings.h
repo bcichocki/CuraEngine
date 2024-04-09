@@ -51,15 +51,6 @@ enum class ESupportType
     EVERYWHERE
 };
 
-/*!
- * Structure of the support, such as Tree Support
- */
-enum class ESupportStructure
-{
-    NORMAL,
-    TREE
-};
-
 enum class EZSeamType
 {
     RANDOM,
@@ -75,13 +66,6 @@ enum class EZSeamCornerPrefType
     Z_SEAM_CORNER_PREF_OUTER,
     Z_SEAM_CORNER_PREF_ANY,
     Z_SEAM_CORNER_PREF_WEIGHTED
-};
-
-enum class ESurfaceMode
-{
-    NORMAL,
-    SURFACE,
-    BOTH
 };
 
 enum class FillPerimeterGapMode
@@ -200,6 +184,10 @@ enum class EGCodeFlavor
  * Real RepRap GCode suitable for printers using RepRap firmware (e.g. Duet controllers)
  **/
     REPRAP = 8,
+
+	// wersja GCode dla Tina3D
+
+	TINA3D = 9,
 };
 
 } //Cura namespace.

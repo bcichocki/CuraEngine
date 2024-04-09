@@ -30,7 +30,7 @@ ImageBasedDensityProvider::ImageBasedDensityProvider(const std::string filename,
             reason = stbi_failure_reason();
         }
         logError("Cannot load image %s: '%s'.\n", filename.c_str(), reason);
-        std::exit(-1);
+        throw(-1);
     }
     { // compute aabb
         Point middle = model_aabb.getMiddle();
@@ -92,6 +92,6 @@ float ImageBasedDensityProvider::operator()(const AABB3D& query_cube) const
         }
     }
     return 1.0f - ((float)total_lightness) / value_count / 255.0f;
-}
+};
 
-} // namespace cura
+}; // namespace cura

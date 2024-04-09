@@ -4,9 +4,6 @@
 #ifndef UTILS_POLYGON_CONNECTOR_H
 #define UTILS_POLYGON_CONNECTOR_H
 
-#ifdef BUILD_TESTS
-    #include <gtest/gtest_prod.h> //To allow tests to use protected members.
-#endif
 #include <vector>
 
 #include "IntPoint.h"
@@ -33,10 +30,6 @@ namespace cura
  */
 class PolygonConnector
 {
-#ifdef BUILD_TESTS
-    FRIEND_TEST(PolygonConnectorTest, getBridgeTest);
-    FRIEND_TEST(PolygonConnectorTest, connectionLengthTest);
-#endif
 public:
     PolygonConnector(coord_t line_width, coord_t max_dist)
     : line_width(line_width - 5) // a bit less so that consecutive lines which have become connected can still connect to other lines
@@ -150,7 +143,7 @@ protected:
      * It cannot be used as a general purpose function for any two ClosestPolygonPoint
      * For large distances between \p from and \p to the output direction might be 'incorrect'.
      */
-    int16_t getPolygonDirection(const ClosestPolygonPoint& from, const ClosestPolygonPoint& to);
+    char getPolygonDirection(const ClosestPolygonPoint& from, const ClosestPolygonPoint& to);
 
     /*!
      * Get the bridge to cross between two polygons.

@@ -5,7 +5,6 @@
 #include "ExtruderTrain.h"
 #include "LayerPlan.h"
 #include "MergeInfillLines.h"
-#include "Slice.h"
 #include "PrintFeature.h"
 #include "utils/linearAlg2D.h"
 
@@ -13,8 +12,8 @@ namespace cura
 {
 MergeInfillLines::MergeInfillLines(ExtruderPlan& plan)
 : extruder_plan(plan)
-, nozzle_size(Application::getInstance().current_slice->scene.extruders[extruder_plan.extruder_nr].settings.get<coord_t>("machine_nozzle_size"))
-, maximum_deviation(Application::getInstance().current_slice->scene.extruders[extruder_plan.extruder_nr].settings.get<coord_t>("meshfix_maximum_deviation"))
+, nozzle_size(Application::getInstance().scene.extruders[extruder_plan.extruder_nr].settings.get<coord_t>("machine_nozzle_size"))
+, maximum_deviation(Application::getInstance().scene.extruders[extruder_plan.extruder_nr].settings.get<coord_t>("meshfix_maximum_deviation"))
     {
         //Just copy the parameters to their fields.
     }
@@ -72,7 +71,7 @@ MergeInfillLines::MergeInfillLines(ExtruderPlan& plan)
         }
         else
         {
-            average_first_path = first_path_start;
+            average_first_path += first_path_start;
             for (const Point& point : first_path.points)
             {
                 average_first_path += point;
