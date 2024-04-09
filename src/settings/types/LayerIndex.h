@@ -1,4 +1,4 @@
-//Copyright (c) 2019 Ultimaker B.V.
+//Copyright (c) 2018 Ultimaker B.V.
 //CuraEngine is released under the terms of the AGPLv3 or higher.
 
 #ifndef LAYERINDEX_H
@@ -20,17 +20,17 @@ struct LayerIndex
     /*
      * \brief Default constructor setting the layer index to 0.
      */
-    constexpr LayerIndex() : value(0) {};
+    LayerIndex() : value(0) {};
 
     /*
      * \brief Casts an integer to a LayerIndex instance.
      */
-    constexpr LayerIndex(int value) : value(value) {};
+    LayerIndex(int value) : value(value) {};
 
     /*
      * \brief Casts the LayerIndex instance to an integer.
      */
-    constexpr operator int() const
+    operator int() const
     {
         return value;
     }
@@ -89,7 +89,7 @@ struct LayerIndex
         operator++(); //Increment myself.
         return original_value;
     }
-    LayerIndex& operator --()
+    LayerIndex operator --()
     {
         value--;
         return *this;

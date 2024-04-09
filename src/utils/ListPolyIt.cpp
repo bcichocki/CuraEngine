@@ -3,9 +3,6 @@
 #include <cmath> // isfinite
 #include <sstream> // ostream
 
-#include "AABB.h" // for debug output svg html
-#include "SVG.h"
-
 namespace cura 
 {
 

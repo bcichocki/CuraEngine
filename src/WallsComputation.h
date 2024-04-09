@@ -25,7 +25,7 @@ public:
      * \param settings The per-mesh settings object to get setting values from.
      * \param layer_nr The layer index that these walls are generated for.
      */
-    WallsComputation(const Settings& settings, const LayerIndex layer_nr);
+    WallsComputation(const Settings& settings, const Tina3D::LayerGroupSettings layer_group, const LayerIndex layer_nr);
 
     /*!
      * Generates the insets / perimeters for all parts in a layer.
@@ -44,6 +44,7 @@ private:
      * Normally this is a mesh's settings.
      */
     const Settings& settings;
+    const Tina3D::LayerGroupSettings layer_group;
 
     /*!
      * \brief The layer that these walls are generated for.

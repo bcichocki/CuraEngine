@@ -23,9 +23,7 @@ bool SupportInfillPart::generateInsetsAndInfillAreas()
     // generate insets, use the first inset as the wall line, and the second as the infill area
     AreaSupport::generateOutlineInsets(insets, outline, inset_count_to_generate, support_line_width);
     if (inset_count_to_generate > 0 && insets.empty())
-    {
         return false;
-    }
 
     // calculate infill area if there are insets
     if (inset_count_to_generate > 0)

@@ -50,6 +50,7 @@ public:
      * Produce all items and consume them.
      */
     void run();
+
 private:
     /*!
      * Produce an item and put it in \ref GcodeLayerThreader::produced
@@ -103,130 +104,142 @@ private:
 
 template <typename T>
 GcodeLayerThreader<T>::GcodeLayerThreader(
-    int start_item_argument_index,
-    int end_item_argument_index,
-    const std::function<T* (int)>& produce_item,
-    const std::function<void (T*)>& consume_item,
-    const unsigned int max_task_count
-)
-: start_item_argument_index(start_item_argument_index)
-, end_item_argument_index(end_item_argument_index)
-, item_count(end_item_argument_index - start_item_argument_index)
-, max_task_count(max_task_count)
-, produce_item(produce_item)
-, consume_item(consume_item)
-, last_produced_argument_index(start_item_argument_index - 1)
+	int start_item_argument_index, int end_item_argument_index,
+	const std::function<T* (int)>& produce_item, const std::function<void(T*)>& consume_item,
+	const unsigned int max_task_count)
+	: start_item_argument_index(start_item_argument_index)
+	, end_item_argument_index(end_item_argument_index)
+	, item_count(end_item_argument_index - start_item_argument_index)
+	, max_task_count(max_task_count)
+	, produce_item(produce_item)
+	, consume_item(consume_item)
+	, last_produced_argument_index(start_item_argument_index - 1)
 {
-    produced.resize(item_count, nullptr);
+	produced.resize(item_count, nullptr);
 }
 
 template <typename T>
 void GcodeLayerThreader<T>::run()
 {
-    #pragma omp parallel
-    {
+	#pragma omp parallel
+	{
+		#pragma omp master
+		{
 #ifdef _OPENMP
-        #pragma omp master
-        log("Multithreading GcodeLayerThreader with %i threads.\n", omp_get_num_threads());
+			log("Multithreading GcodeLayerThreader with %i threads.\n", omp_get_num_threads());
 #endif // _OPENMP
-        while (true)
-        {
-            if (finished())
-            {
-                break;
-            }
-            act();
-        }
-    }
+		}
+
+		while(true)
+		{
+			if(finished())
+				break;
+
+			act();
+		}
+	}
 }
 
 template <typename T>
 void GcodeLayerThreader<T>::produce(int item_argument_index)
 {
-    T* produced_item = produce_item(item_argument_index);
-    int item_idx = item_argument_index - start_item_argument_index;
-    #pragma omp critical
-    {
-        produced[item_idx] = produced_item;
-        if (item_idx == last_consumed_idx + 1 && item_idx < end_item_argument_index - start_item_argument_index)
-        {
-            assert(!to_be_consumed_item_idx && "the just produced item shouldn't be consumable already!");
-            to_be_consumed_item_idx = item_idx;
-        }
-    }
+	T* produced_item = produce_item(item_argument_index);
+	
+	int item_idx = item_argument_index - start_item_argument_index;
+	
+	#pragma omp critical
+	{
+		produced[item_idx] = produced_item;
+
+		if(item_idx == last_consumed_idx + 1 && item_idx < end_item_argument_index - start_item_argument_index)
+		{
+			assert(!to_be_consumed_item_idx && "the just produced item shouldn't be consumable already!");
+			to_be_consumed_item_idx = item_idx;
+		}
+	}
 }
 
 template <typename T>
 void GcodeLayerThreader<T>::consume(int item_idx)
 {
-    consume_item(produced[item_idx]);
-    produced[item_idx] = nullptr;
-    #pragma omp critical
-    {
-        assert(item_idx == last_consumed_idx + 1);
-        last_consumed_idx = item_idx;
-        if (last_consumed_idx + 1 < end_item_argument_index - start_item_argument_index && produced[last_consumed_idx + 1])
-        {
-            assert(!to_be_consumed_item_idx && "The next produced item shouldn't already be noted as being consumable because of the lock!");
-            to_be_consumed_item_idx = last_consumed_idx + 1;
-        }
-        active_task_count--;
-        assert(active_task_count >= 0);
-    }
+	consume_item(produced[item_idx]);
+	produced[item_idx] = nullptr;
+
+	#pragma omp critical
+	{
+		assert(item_idx == last_consumed_idx + 1);
+
+		last_consumed_idx = item_idx;
+
+		if(last_consumed_idx + 1 < end_item_argument_index - start_item_argument_index && produced[last_consumed_idx + 1])
+		{
+			assert(!to_be_consumed_item_idx && "The next produced item shouldn't already be noted as being consumable because of the lock!");
+			to_be_consumed_item_idx = last_consumed_idx + 1;
+		}
+		
+		active_task_count--;
+		assert(active_task_count >= 0);
+	}
 }
 
 template <typename T>
 void GcodeLayerThreader<T>::act()
 {
-    {
-        int item_idx = -1;
-        #pragma omp critical
-        {
-            if (to_be_consumed_item_idx && consume_lock.test_lock())
-            {
-                item_idx = *to_be_consumed_item_idx;
-                to_be_consumed_item_idx = nullptr;
-            }
-        }
-        if (item_idx >= 0)
-        {
-            consume(item_idx);
-            consume_lock.unlock();
-            return;
-        }
-    }
+	{
+		int item_idx = -1;
 
-    {
-        std::optional<int> item_argument_index;
-        #pragma omp critical
-        {
-            if (active_task_count < max_task_count)
-            {
-                item_argument_index = ++last_produced_argument_index;
-                active_task_count++;
-            }
-        }
-        if (item_argument_index && *item_argument_index < end_item_argument_index)
-        {
-            produce(*item_argument_index);
-            return;
-        }
-    }
+		#pragma omp critical
+		{
+			if(to_be_consumed_item_idx && consume_lock.test_lock())
+			{
+				item_idx = *to_be_consumed_item_idx;
+				to_be_consumed_item_idx = nullptr;
+			}
+		}
+
+		if(item_idx >= 0)
+		{
+			consume(item_idx);
+			consume_lock.unlock();
+			return;
+		}
+	}
+
+	{
+		std::optional<int> item_argument_index;
+
+		#pragma omp critical
+		{
+			if(active_task_count < max_task_count)
+			{
+				item_argument_index = ++last_produced_argument_index;
+				active_task_count++;
+			}
+		}
+
+		if(item_argument_index && *item_argument_index < end_item_argument_index)
+		{
+			produce(*item_argument_index);
+			return;
+		}
+	}
+	
 #ifdef _OPENMP
-    // thread is blocked by too many items being processed
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-#endif
+	// thread is blocked by too many items being processed
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+#endif // _OPENMP
 }
 
 template <typename T>
 bool GcodeLayerThreader<T>::finished()
 {
     bool finished;
-    #pragma omp critical
+
+	#pragma omp critical
     {
-        finished = last_produced_argument_index >= end_item_argument_index - 1
-            && !to_be_consumed_item_idx;
+        finished = last_produced_argument_index >= end_item_argument_index - 1 && !to_be_consumed_item_idx;
     }
+	
     return finished;
 }
 

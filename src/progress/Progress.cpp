@@ -5,7 +5,6 @@
 
 #include "Progress.h"
 #include "../Application.h" //To get the communication channel to send progress through.
-#include "../communication/Communication.h" //To send progress through the communication channel.
 #include "../utils/gettime.h"
 #include "../utils/logoutput.h"
 
@@ -57,7 +56,6 @@ void Progress::init()
 void Progress::messageProgress(Progress::Stage stage, int progress_in_stage, int progress_in_stage_max)
 {
     float percentage = calcOverallProgress(stage, float(progress_in_stage) / float(progress_in_stage_max));
-    Application::getInstance().communication->sendProgress(percentage);
 
     logProgress(names[(int)stage].c_str(), progress_in_stage, progress_in_stage_max, percentage);
 }

@@ -48,7 +48,7 @@ Polygon SierpinskiFillProvider::generate(EFillMethod pattern, coord_t z, coord_t
     {
         Polygon ret;
         logError("Different density sierpinski fill for different layers is not implemented yet!\n");
-        std::exit(-1);
+        throw(-1);
         return ret;
     }
 }
@@ -89,4 +89,4 @@ SierpinskiFillProvider::FractalConfig SierpinskiFillProvider::getFractalConfig(c
 
 
 
-} // namespace cura
+}; // namespace cura

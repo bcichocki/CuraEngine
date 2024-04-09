@@ -100,7 +100,8 @@ void Infill::_generate(Polygons& result_polygons, Polygons& result_lines, const 
 
     if (pattern == EFillMethod::ZIG_ZAG || (zig_zaggify && (pattern == EFillMethod::LINES || pattern == EFillMethod::TRIANGLES || pattern == EFillMethod::GRID || pattern == EFillMethod::CUBIC || pattern == EFillMethod::TETRAHEDRAL || pattern == EFillMethod::QUARTER_CUBIC || pattern == EFillMethod::TRIHEXAGON || pattern == EFillMethod::GYROID)))
     {
-        outline_offset -= infill_line_width / 2; // the infill line zig zag connections must lie next to the border, not on it
+        const float width_scale = (mesh) ? (float)mesh->settings.get<coord_t>("layer_height") / mesh->settings.get<coord_t>("infill_sparse_thickness") : 1;
+        outline_offset -= width_scale * infill_line_width / 2; // the infill line zig zag connections must lie next to the border, not on it
     }
 
     switch(pattern)
@@ -187,10 +188,9 @@ void Infill::multiplyInfill(Polygons& result_polygons, Polygons& result_lines)
 
     const Polygons outline = in_outline.offset(outline_offset);
 
-    // Get the first offset these are mirrored from the original center line
     Polygons result;
     Polygons first_offset;
-    {
+    { // calculate [first_offset]
         const Polygons first_offset_lines = result_lines.offsetPolyLine(offset); // make lines on both sides of the input lines
         const Polygons first_offset_polygons_inward = result_polygons.offset(-offset); // make lines on the inside of the input polygons
         const Polygons first_offset_polygons_outward = result_polygons.offset(offset); // make lines on the other side of the input polygons
@@ -202,28 +202,19 @@ void Infill::multiplyInfill(Polygons& result_polygons, Polygons& result_lines)
         }
     }
     result.add(first_offset);
-
-    // Create the additional offsets from the first offsets, generated earlier, the direction of these offsets is
-    // depended on whether these lines should be connected or not.
-    if (infill_multiplier > 3)
+    Polygons reference_polygons = first_offset;
+    for (size_t infill_line = 1; infill_line < infill_multiplier / 2; infill_line++) // 2 because we are making lines on both sides at the same time
     {
-        Polygons reference_polygons = first_offset;
-        const size_t multiplier = static_cast<size_t>(infill_multiplier / 2);
-
-        const int extra_offset = mirror_offset ? -infill_line_width : infill_line_width;
-        for (size_t infill_line = 1; infill_line < multiplier; ++infill_line)
-        {
-            Polygons extra_polys = reference_polygons.offset(extra_offset);
-            result.add(extra_polys);
-            reference_polygons = std::move(extra_polys);
-        }
+        Polygons extra_offset = reference_polygons.offset(-infill_line_width);
+        result.add(extra_offset);
+        reference_polygons = std::move(extra_offset);
     }
+
     if (zig_zaggify)
     {
         result = result.intersection(outline);
     }
 
-    // Remove the original center lines when there are an even number of lines required.
     if (!odd_multiplier)
     {
         result_polygons.clear();
@@ -287,7 +278,6 @@ void Infill::generateConcentricInfill(Polygons& first_concentric_wall, Polygons&
     while (prev_inset->size() > 0)
     {
         new_inset = prev_inset->offset(-inset_value);
-        new_inset.simplify();
         result.add(new_inset);
         if (perimeter_gaps)
         {
@@ -648,7 +638,10 @@ void Infill::generateLinearBasedInfill(const int outline_offset, Polygons& resul
             {
                 continue;
             }
-            InfillLineSegment* new_segment = new InfillLineSegment(unrotated_first, first.vertex_index, first.polygon_index, unrotated_second, second.vertex_index, second.polygon_index);
+            
+			InfillLineSegment* new_segment = new InfillLineSegment(unrotated_first, first.vertex_index, first.polygon_index, unrotated_second, second.vertex_index, second.polygon_index);
+			memory_track.push_back(new_segment);
+
             //Put the same line segment in the data structure twice: Once for each of the polygon line segment that it crosses.
             crossings_on_line[first.polygon_index][first.vertex_index].push_back(new_segment);
             crossings_on_line[second.polygon_index][second.vertex_index].push_back(new_segment);
@@ -757,6 +750,8 @@ void Infill::connectLines(Polygons& result_lines)
                     else
                     {
                         new_segment = new InfillLineSegment(previous_point, vertex_index, polygon_index, next_point, vertex_index, polygon_index); //A connecting line between them.
+						memory_track.push_back(new_segment);
+
                         new_segment->previous = previous_segment;
                         if (previous_segment->start_segment == vertex_index && previous_segment->start_polygon == polygon_index)
                         {
@@ -798,6 +793,8 @@ void Infill::connectLines(Polygons& result_lines)
                     else
                     {
                         new_segment = new InfillLineSegment(previous_segment->start, vertex_index, polygon_index, vertex_after, (vertex_index + 1) % outline[polygon_index].size(), polygon_index);
+						memory_track.push_back(new_segment);
+
                         previous_segment->previous = new_segment;
                         new_segment->previous = previous_segment;
                         previous_segment = new_segment;
@@ -814,6 +811,8 @@ void Infill::connectLines(Polygons& result_lines)
                     else
                     {
                         new_segment = new InfillLineSegment(previous_segment->end, vertex_index, polygon_index, vertex_after, (vertex_index + 1) % outline[polygon_index].size(), polygon_index);
+						memory_track.push_back(new_segment);
+
                         previous_segment->next = new_segment;
                         new_segment->previous = previous_segment;
                         previous_segment = new_segment;

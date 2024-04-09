@@ -40,7 +40,8 @@ public:
     std::vector<Point> points; //!< The points constituting this path.
     bool done; //!< Path is finished, no more moves should be added, and a new path should be started instead of any appending done to this one.
 
-    bool spiralize; //!< Whether to gradually increment the z position during the printing of this path. A sequence of spiralized paths should start at the given layer height and end in one layer higher.
+    bool spiralize = false; //!< Whether to gradually increment the z position during the printing of this path. A sequence of spiralized paths should start at the given layer height and end in one layer higher.
+	size_t group_id = 0;
 
     double fan_speed; //!< fan speed override for this path, value should be within range 0-100 (inclusive) and ignored otherwise
 
@@ -58,7 +59,7 @@ public:
      * \param speed_factor The factor that the travel speed will be multiplied with
      * this path.
      */
-    GCodePath(const GCodePathConfig& config, std::string mesh_id, const SpaceFillType space_fill_type, const Ratio flow, const bool spiralize, const Ratio speed_factor = 1.0);
+    GCodePath(const GCodePathConfig& config, const std::string& mesh_id, const SpaceFillType space_fill_type, const Ratio flow, size_t group_id, const Ratio speed_factor = 1.0);
 
     /*!
      * Whether this config is the config of a travel path.

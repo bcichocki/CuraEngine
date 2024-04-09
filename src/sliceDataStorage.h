@@ -5,10 +5,10 @@
 #define SLICE_DATA_STORAGE_H
 
 #include <map>
-#include "PrimeTower.h"
+#include <vector>
+#include "utils/polygonUtils.h"
 #include "RetractionConfig.h"
 #include "SupportInfillPart.h"
-#include "TopSurface.h"
 #include "settings/Settings.h" //For MAX_EXTRUDERS.
 #include "settings/types/AngleDegrees.h" //Infill angles.
 #include "settings/types/LayerIndex.h"
@@ -19,11 +19,13 @@
 #include "utils/optional.h"
 #include "utils/polygon.h"
 #include "WipeScriptConfig.h"
+#include <engine/core/groups.h>
 
 namespace cura 
 {
 
 class Mesh;
+class SliceMeshStorage;
 class SierpinskiFillProvider;
 
 /*!
@@ -136,6 +138,10 @@ public:
      * \return the own infill area
      */
     const Polygons& getOwnInfillArea() const;
+
+	///////////////////////////////////////////////////////////////////////////////////////////////
+
+	size_t group_id;
 };
 
 /*!
@@ -150,14 +156,6 @@ public:
     Polygons openPolyLines; //!< A list of lines which were never hooked up into a 2D polygon. (Currently unused in normal operation)
     mutable std::map<size_t, Polygons> innermost_walls_cache; //!< Cache for the in some cases computationaly expensive calculations in 'getInnermostWalls'.
         // ^^^^ NOTE: Caching function-results like this, when they don't change but are expensive to calculate, is generally considered one of the few 'acceptable uses' of the 'mutable' keyword.
-
-    /*!
-     * \brief The parts of the model that are exposed at the very top of the
-     * model.
-     *
-     * This is filled only when the top surface is needed.
-     */
-    TopSurface top_surface;
 
     /*!
      * Get the all outlines of all layer parts in this layer.
@@ -188,9 +186,6 @@ public:
 };
 
 /******************/
-
-
-
 
 class SupportLayer
 {
@@ -237,6 +232,7 @@ class SliceMeshStorage
 {
 public:
     Settings& settings;
+    Tina3D::LayerGroupSettings& layer_group;
     std::vector<SliceLayer> layers;
     std::string mesh_name;
 
@@ -307,19 +303,12 @@ public:
     SupportStorage support;
 
     Polygons skirt_brim[MAX_EXTRUDERS]; //!< Skirt and brim polygons per extruder, ordered from inner to outer polygons.
-    size_t skirt_brim_max_locked_part_order[MAX_EXTRUDERS]; //!< Some parts (like skirt) always need to be printed before parts like support-brim, so lock 0..n for each extruder, where n is the value saved in this array.
     Polygons raftOutline;               //Storage for the outline of the raft. Will be filled with lines when the GCode is generated.
 
     int max_print_height_second_to_last_extruder; //!< Used in multi-extrusion: the layer number beyond which all models are printed with the same extruder
     std::vector<int> max_print_height_per_extruder; //!< For each extruder the highest layer number at which it is used.
     std::vector<size_t> max_print_height_order; //!< Ordered indices into max_print_height_per_extruder: back() will return the extruder number with the highest print height.
 
-    std::vector<int> spiralize_seam_vertex_indices; //!< the index of the seam vertex for each layer
-    std::vector<Polygons* > spiralize_wall_outlines; //!< the wall outline polygons for each layer
-
-    PrimeTower primeTower;
-
-    std::vector<Polygons> oozeShield;        //oozeShield per layer
     Polygons draft_protection_shield; //!< The polygons for a heightened skirt which protects from warping by gusts of wind and acts as a heated chamber.
 
     /*!
@@ -341,9 +330,8 @@ public:
      * \param include_prime_tower Whether to include the prime tower in the
      * outline.
      * \param external_polys_only Whether to disregard all hole polygons.
-     * \param for_brim Whether the outline is to be used to construct the brim.
      */
-    Polygons getLayerOutlines(const LayerIndex layer_nr, const bool include_support, const bool include_prime_tower, const bool external_polys_only = false, const bool for_brim = false) const;
+    Polygons getLayerOutlines(const LayerIndex layer_nr, const bool include_support, const bool include_prime_tower, const bool external_polys_only = false) const;
 
     /*!
      * Get the extruders used.
@@ -360,14 +348,6 @@ public:
      * \return a vector of bools indicating whether the extruder with corresponding index is used in this layer.
      */
     std::vector<bool> getExtrudersUsed(LayerIndex layer_nr) const;
-
-    /*!
-     * Gets whether prime blob is enabled for the given extruder number.
-     *
-     * \param extruder_nr the extruder number to check.
-     * \return a bool indicating whether prime blob is enabled for the given extruder number.
-     */
-    bool getExtruderPrimeBlobEnabled(const size_t extruder_nr) const;
 
     /*!
      * Gets the border of the usable print area for this machine.

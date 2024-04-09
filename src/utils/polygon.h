@@ -7,7 +7,7 @@
 #include <vector>
 #include <assert.h>
 #include <float.h>
-#include <clipper.hpp>
+#include <clipper/clipper.hpp>
 
 #include <algorithm>    // std::reverse, fill_n array
 #include <cmath> // fabs
@@ -449,19 +449,8 @@ public:
     /*! 
      * Removes consecutive line segments with same orientation and changes this polygon.
      * 
-     * 1. Removes verts which are connected to line segments which are too small.
-     * 2. Removes verts which detour from a direct line from the previous and next vert by a too small amount.
-     * 3. Moves a vert when a small line segment is connected to a much longer one. in order to maintain the outline of the object.
-     * 4. Don't remove a vert when the impact on the outline of the object is too great.
-     *
-     * Note that the simplify is a best effort algorithm. It does not guarantee that no lines below the provided smallest_line_segment_squared are left.
-     *
-     * The following example (Two very long line segments (" & , respectively) that are connected by a very small line segment (i) is unsimplifable by this
-     * function, even though the actual area change of removing line segment i is very small. The reason for this is that in the case of long lines, even a small
-     * deviation from it's original direction is very noticeable in the final result, especially if the polygons above make a slightly different choice.
-     *
-     * """"""""""""""""""""""""""""""""i,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-
+     * Removes verts which are connected to line segments which are both too small.
+     * Removes verts which detour from a direct line from the previous and next vert by a too small amount.
      * 
      * \param smallest_line_segment_squared maximal squared length of removed line segments
      * \param allowed_error_distance_squared The square of the distance of the middle point to the line segment of the consecutive and previous point for which the middle point is removed
@@ -900,18 +889,6 @@ public:
      * than the `smallest_line_segment`, unless that would introduce a deviation
      * in the contour of more than `allowed_error_distance`.
      *
-     * Criteria:
-     * 1. Never remove a vertex if either of the connceted segments is larger than \p smallest_line_segment
-     * 2. Never remove a vertex if the distance between that vertex and the final resulting polygon would be higher than \p allowed_error_distance
-     * 3. The direction of segments longer than \p smallest_line_segment always
-     * remains unaltered (but their end points may change if it is connected to
-     * a small segment)
-     *
-     * Simplify uses a heuristic and doesn't neccesarily remove all removable
-     * vertices under the above criteria, but simplify may never violate these
-     * criteria. Unless the segments or the distance is smaller than the
-     * rounding error of 5 micron.
-     * 
      * Vertices which introduce an error of less than 5 microns are removed
      * anyway, even if the segments are longer than the smallest line segment.
      * This makes sure that (practically) colinear line segments are joined into
@@ -961,15 +938,6 @@ public:
      * Each PolygonsPart in the result has an outline as first polygon, whereas the rest are holes.
      */
     std::vector<PolygonsPart> splitIntoParts(bool unionAll = false) const;
-
-    /*!
-     * Utility method for creating the tube (or 'donut') of a shape.
-     * \param inner_offset Offset relative to the original shape-outline towards the inside of the shape. Sort-of like a negative normal offset, except it's the offset part that's kept, not the shape.
-     * \param outer_offset Offset relative to the original shape-outline towards the outside of the shape. Comparable to normal offset.
-     * \return The resulting polygons.
-     */
-    Polygons tubeShape(const coord_t inner_offset, const coord_t outer_offset) const;
-
 private:
     /*!
      * recursive part of \ref Polygons::removeEmptyHoles and \ref Polygons::getEmptyHoles
@@ -997,12 +965,21 @@ private:
     void splitIntoPartsView_processPolyTreeNode(PartsView& partsView, Polygons& reordered, ClipperLib::PolyNode* node) const;
 public:
     /*!
-     * Removes polygons with area smaller than \p min_area_size (note that min_area_size is in mm^2, not in micron^2).
-     * Unless \p remove_holes is true, holes are not removed even if their area is below \p min_area_size.
-     * However, holes that are contained within outlines whose area is below the threshold are removed though.
+     * Removes polygons with area smaller than \p minAreaSize (note that minAreaSize is in mm^2, not in micron^2).
      */
-    void removeSmallAreas(const double min_area_size, const bool remove_holes = false);
-
+    void removeSmallAreas(double minAreaSize)
+    {
+        Polygons& thiss = *this;
+        for(unsigned int i=0; i<size(); i++)
+        {
+            double area = INT2MM(INT2MM(fabs(thiss[i].area())));
+            if (area < minAreaSize) // Only create an up/down skin if the area is large enough. So you do not create tiny blobs of "trying to fill"
+            {
+                remove(i);
+                i -= 1;
+            }
+        }
+    }
     /*!
      * Removes overlapping consecutive line segments which don't delimit a positive area.
      */

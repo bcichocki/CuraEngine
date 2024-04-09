@@ -11,7 +11,7 @@ Integer points are used to avoid floating point rounding errors, and because Cli
 #define INLINE static inline
 
 //Include Clipper to get the ClipperLib::IntPoint definition, which we reuse as Point definition.
-#include <clipper.hpp>
+#include <clipper/clipper.hpp>
 #include <cmath>
 #include <functional> // for hash function object
 #include <iostream> // auto-serialization / auto-toString()
@@ -82,7 +82,7 @@ INLINE coord_t vSize2(const Point& p0)
 }
 INLINE float vSize2f(const Point& p0)
 {
-    return static_cast<float>(p0.X)*static_cast<float>(p0.X)+static_cast<float>(p0.Y)*static_cast<float>(p0.Y);
+    return float(p0.X)*float(p0.X)+float(p0.Y)*float(p0.Y);
 }
 
 INLINE bool shorterThen(const Point& p0, const coord_t len)
@@ -100,7 +100,7 @@ INLINE bool shorterThen(const Point& p0, const coord_t len)
 
 INLINE coord_t vSize(const Point& p0)
 {
-    return sqrt(vSize2(p0));
+    return static_cast<coord_t>(sqrt(vSize2(p0)));
 }
 
 INLINE double vSizeMM(const Point& p0)
@@ -143,7 +143,7 @@ INLINE int angle(const Point& p)
 }
 
 }//namespace cura
-
+    
 namespace std {
 template <>
 struct hash<cura::Point> {
@@ -153,7 +153,7 @@ struct hash<cura::Point> {
         int result = 89;
         result = result * prime + pp.X;
         result = result * prime + pp.Y;
-        return result;
+        return result; 
     }
 };
 }

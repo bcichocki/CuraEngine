@@ -11,11 +11,9 @@
 #include "LinePolygonsCrossings.h"
 #include "../Application.h"
 #include "../ExtruderTrain.h"
-#include "../Slice.h"
 #include "../utils/linearAlg2D.h"
 #include "../utils/PolygonsPointIndex.h"
 #include "../sliceDataStorage.h"
-#include "../utils/SVG.h"
 
 namespace cura {
 
@@ -47,7 +45,7 @@ Comb::Comb(const SliceDataStorage& storage, const LayerIndex layer_nr, const Pol
         {
             const std::vector<bool> extruder_is_used = storage.getExtrudersUsed();
             bool travel_avoid_supports = false;
-            for (const ExtruderTrain& extruder : Application::getInstance().current_slice->scene.extruders)
+            for (const ExtruderTrain& extruder : Application::getInstance().scene.extruders)
             {
                 travel_avoid_supports |= extruder_is_used[extruder.extruder_nr] && extruder.settings.get<bool>("travel_avoid_other_parts") && extruder.settings.get<bool>("travel_avoid_supports");
             }
@@ -92,8 +90,8 @@ bool Comb::calc(const ExtruderTrain& train, Point startPoint, Point endPoint, Co
     unsigned int end_inside_poly = NO_INDEX;
     const bool endInside = moveInside(boundary_inside_optimal, _endInside, inside_loc_to_line_optimal, endPoint, end_inside_poly);
 
-    unsigned int start_part_boundary_poly_idx;
-    unsigned int end_part_boundary_poly_idx;
+    unsigned int start_part_boundary_poly_idx = 0;
+    unsigned int end_part_boundary_poly_idx = 0;
     unsigned int start_part_idx =   (start_inside_poly == NO_INDEX)?    NO_INDEX : partsView_inside_optimal.getPartContaining(start_inside_poly, &start_part_boundary_poly_idx);
     unsigned int end_part_idx =     (end_inside_poly == NO_INDEX)?      NO_INDEX : partsView_inside_optimal.getPartContaining(end_inside_poly, &end_part_boundary_poly_idx);
 
@@ -163,7 +161,7 @@ bool Comb::calc(const ExtruderTrain& train, Point startPoint, Point endPoint, Co
 
     const std::vector<bool> extruder_is_used = storage.getExtrudersUsed(layer_nr);
     bool travel_avoid_other_parts = false;
-    for (const ExtruderTrain& train : Application::getInstance().current_slice->scene.extruders)
+    for (const ExtruderTrain& train : Application::getInstance().scene.extruders)
     {
         travel_avoid_other_parts |= extruder_is_used[train.extruder_nr] && train.settings.get<bool>("travel_avoid_other_parts");
     }
@@ -380,7 +378,7 @@ void Comb::Crossing::findCrossingInOrMid(const PartsView& partsView_inside, cons
     { // mid-case
         in_or_mid = dest_point;
     }
-}
+};
 
 bool Comb::Crossing::findOutside(const Polygons& outside, const Point close_to, const bool fail_on_unavoidable_obstacles, Comb& comber)
 {

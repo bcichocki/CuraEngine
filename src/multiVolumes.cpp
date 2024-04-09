@@ -1,12 +1,8 @@
 //Copyright (c) 2018 Ultimaker B.V.
 //CuraEngine is released under the terms of the AGPLv3 or higher.
 
-#include "multiVolumes.h"
-
-#include <algorithm>
-
 #include "Application.h"
-#include "Slice.h"
+#include "multiVolumes.h"
 #include "slicer.h"
 #include "settings/EnumSettings.h"
 
@@ -16,31 +12,23 @@ namespace cura
 void carveMultipleVolumes(std::vector<Slicer*> &volumes)
 {
     //Go trough all the volumes, and remove the previous volume outlines from our own outline, so we never have overlapped areas.
-    const bool alternate_carve_order = Application::getInstance().current_slice->scene.current_mesh_group->settings.get<bool>("alternate_carve_order");
-    std::vector<Slicer*> ranked_volumes = volumes;
-    std::sort(ranked_volumes.begin(), ranked_volumes.end(),
-              [](Slicer* volume_1, Slicer* volume_2)
-                {
-                    return volume_1->mesh->settings.get<int>("infill_mesh_order") < volume_2->mesh->settings.get<int>("infill_mesh_order");
-                } );
+    const bool alternate_carve_order = Application::getInstance().scene.current_mesh_group->settings.get<bool>("alternate_carve_order");
     for (unsigned int volume_1_idx = 1; volume_1_idx < volumes.size(); volume_1_idx++)
     {
-        Slicer& volume_1 = *ranked_volumes[volume_1_idx];
+        Slicer& volume_1 = *volumes[volume_1_idx];
         if (volume_1.mesh->settings.get<bool>("infill_mesh") 
             || volume_1.mesh->settings.get<bool>("anti_overhang_mesh")
-            || volume_1.mesh->settings.get<bool>("support_mesh")
-            || volume_1.mesh->settings.get<ESurfaceMode>("magic_mesh_surface_mode") == ESurfaceMode::SURFACE
+            || volume_1.mesh->layer_group.support_mesh
             )
         {
             continue;
         }
         for (unsigned int volume_2_idx = 0; volume_2_idx < volume_1_idx; volume_2_idx++)
         {
-            Slicer& volume_2 = *ranked_volumes[volume_2_idx];
+            Slicer& volume_2 = *volumes[volume_2_idx];
             if (volume_2.mesh->settings.get<bool>("infill_mesh")
                 || volume_2.mesh->settings.get<bool>("anti_overhang_mesh")
-                || volume_2.mesh->settings.get<bool>("support_mesh")
-                || volume_2.mesh->settings.get<ESurfaceMode>("magic_mesh_surface_mode") == ESurfaceMode::SURFACE
+                || volume_2.mesh->layer_group.support_mesh
                 )
             {
                 continue;
@@ -53,7 +41,7 @@ void carveMultipleVolumes(std::vector<Slicer*> &volumes)
             {
                 SlicerLayer& layer1 = volume_1.layers[layerNr];
                 SlicerLayer& layer2 = volume_2.layers[layerNr];
-                if (alternate_carve_order && layerNr % 2 == 0 && volume_1.mesh->settings.get<int>("infill_mesh_order") == volume_2.mesh->settings.get<int>("infill_mesh_order"))
+                if (alternate_carve_order && layerNr % 2 == 0)
                 {
                     layer2.polygons = layer2.polygons.difference(layer1.polygons);
                 }
@@ -81,7 +69,7 @@ void generateMultipleVolumesOverlap(std::vector<Slicer*> &volumes)
         coord_t overlap = volume->mesh->settings.get<coord_t>("multiple_mesh_overlap");
         if (volume->mesh->settings.get<bool>("infill_mesh")
             || volume->mesh->settings.get<bool>("anti_overhang_mesh")
-            || volume->mesh->settings.get<bool>("support_mesh")
+            || volume->mesh->layer_group.support_mesh
             || overlap == 0)
         {
             continue;
@@ -95,7 +83,7 @@ void generateMultipleVolumesOverlap(std::vector<Slicer*> &volumes)
             {
                 if (other_volume->mesh->settings.get<bool>("infill_mesh")
                     || other_volume->mesh->settings.get<bool>("anti_overhang_mesh")
-                    || other_volume->mesh->settings.get<bool>("support_mesh")
+                    || other_volume->mesh->layer_group.support_mesh
                     || !other_volume->mesh->getAABB().hit(aabb)
                     || other_volume == volume
                 )
@@ -131,7 +119,7 @@ void MultiVolumes::carveCuttingMeshes(std::vector<Slicer*>& volumes, const std::
                 const Mesh& carved_mesh = meshes[carved_mesh_idx];
                 //Do not apply cutting_mesh for meshes which have settings (cutting_mesh, anti_overhang_mesh, support_mesh).
                 if (carved_mesh.settings.get<bool>("cutting_mesh") || carved_mesh.settings.get<bool>("anti_overhang_mesh")
-                    || carved_mesh.settings.get<bool>("support_mesh"))
+                    || carved_mesh.layer_group.support_mesh)
                 {
                     continue;
                 }

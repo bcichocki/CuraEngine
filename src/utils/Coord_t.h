@@ -6,18 +6,22 @@
 
 
 //Include Clipper to get the ClipperLib::IntPoint definition, which we reuse as Point definition.
-#include <clipper.hpp>
+#include <clipper/clipper.hpp>
 
 namespace cura
 {
 
 using coord_t = ClipperLib::cInt;
 
-#define INT2MM(n) (static_cast<double>(n) / 1000.0)
-#define INT2MM2(n) (static_cast<double>(n) / 1000000.0)
-#define MM2INT(n) (static_cast<coord_t>((n) * 1000 + 0.5 * (((n) > 0) - ((n) < 0))))
-#define MM2_2INT(n) (static_cast<coord_t>((n) * 1000000 + 0.5 * (((n) > 0) - ((n) < 0))))
-#define MM3_2INT(n) (static_cast<coord_t>((n) * 1000000000 + 0.5 * (((n) > 0) - ((n) < 0))))
+static constexpr double INT2MM(coord_t n) noexcept { return (double(n) / 1000.0); }
+
+static constexpr double INT2MM2(coord_t n) noexcept { return (double(n) / 1000000.0); }
+
+static constexpr coord_t MM2INT(double n) noexcept { return (coord_t((n) * 1000 + 0.5 * (((n) > 0) - ((n) < 0)))); }
+
+static constexpr coord_t MM2_2INT(double n) noexcept { return (coord_t((n) * 1000000 + 0.5 * (((n) > 0) - ((n) < 0)))); }
+
+static constexpr coord_t MM3_2INT(double n) noexcept { return (coord_t((n) * 1000000000 + 0.5 * (((n) > 0) - ((n) < 0)))); }
 
 #define INT2MICRON(n) ((n) / 1)
 #define MICRON2INT(n) ((n) * 1)

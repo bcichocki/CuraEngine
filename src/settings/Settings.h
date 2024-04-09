@@ -5,18 +5,20 @@
 #define SETTINGS_SETTINGS_H
 
 #ifndef VERSION
-#define VERSION "DEV"
+#define VERSION "240305.35"
 #endif
 
-#define MAX_EXTRUDERS 16
-
-//Maximum number of infill layers that can be combined into a single infill extrusion area.
-#define MAX_INFILL_COMBINE 8
-
+#include <cstddef>
 #include <vector>
 #include <map>
 #include <unordered_map>
 #include <sstream>
+
+static constexpr size_t EXTRUDER_BASE = 0;
+static constexpr size_t MAX_EXTRUDERS = 4;
+
+//Maximum number of infill layers that can be combined into a single infill extrusion area.
+static constexpr size_t MAX_INFILL_COMBINE = 8;
 
 namespace cura
 {
@@ -33,10 +35,8 @@ namespace cura
 class Settings
 {
 public:
-    /*
-     * \brief Properly initialises the Settings instance.
-     */
-    Settings();
+
+	void clear();
 
     /*!
      * \brief Adds a new setting.
@@ -66,6 +66,10 @@ public:
      */
     template<typename A> A get(const std::string& key) const;
 
+    //template<typename A> A get(const std::string& key, const A& def) const;
+
+    template<typename A> A get(const std::string& key, const std::string& def) const;
+
     /*!
      * \brief Get a string containing all settings in this container.
      *
@@ -93,14 +97,14 @@ public:
      *
      * If this set of settings has no value for a setting, the parent is asked.
      */
-    void setParent(Settings* new_parent);
+    void setParent(Settings* new_parent) { parent = new_parent; }
 
 private:
     /*!
      * Optionally, a parent setting container to ask for the value of a setting
      * if this container has no value for it.
      */
-    Settings* parent;
+    Settings* parent = nullptr;
 
     /*!
      * \brief A dictionary to map the setting keys to the actual setting values.
@@ -116,7 +120,7 @@ private:
      * \param key The key of the setting to get.
      * \return The setting's value.
      */
-    std::string getWithoutLimiting(const std::string& key) const;
+    //std::string getWithoutLimiting(const std::string& key) const;
 };
 
 } //namespace cura
